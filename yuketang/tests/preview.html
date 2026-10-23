@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><title>连播助手 · 本地预览</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f5f7f6;color:#293b32;font:14px/1.6 system-ui,"Microsoft YaHei",sans-serif}
+header{height:76px;background:white;border-bottom:1px solid #e2e8e4;padding:22px 32px;font-size:20px;font-weight:650}
+.layout{display:grid;grid-template-columns:260px 1fr;gap:28px;max-width:1260px;margin:32px auto;padding:0 24px}
+aside,main{background:white;border:1px solid #e4e9e6;border-radius:14px;padding:24px}aside h3{margin:0 0 20px;font-size:16px}
+aside a{display:flex;gap:10px;align-items:center;padding:13px 10px;margin:5px -10px;color:#637469;text-decoration:none;border-radius:8px;font-size:13px}
+aside a.active{background:#eaf5ee;color:#21754a}aside span{font-size:11px;color:#92a198}main h2{font-size:21px;margin:0 0 6px}p{color:#88958d;margin:5px 0 22px}
+.screen{height:360px;position:relative;border-radius:10px;background:#213d31;overflow:hidden;display:grid;place-items:center;color:#c7e4d3}
+video{position:absolute;width:100%;height:100%;inset:0}.screen b{font-size:25px;font-weight:450;pointer-events:none}.screen small{position:absolute;bottom:20px;left:20px;color:#a8cbb8}
+.notes{padding-top:30px}.notes h3{font-size:15px}.notes p{max-width:620px;line-height:1.8}
+xt-speedbutton{position:absolute;right:30px;bottom:24px;z-index:1;cursor:pointer;color:white}
+xt-speedvalue{display:block;padding:5px 12px;background:#152b22;border-radius:4px}
+xt-speedlist{display:none;position:absolute;bottom:100%;left:0;opacity:0;min-width:80px}
+xt-speedbutton ul{margin:0;padding:5px 0;list-style:none;background:#152b22}
+xt-speedbutton:hover xt-speedlist{display:block;opacity:1}xt-speedbutton li{padding:5px 12px}xt-speedbutton li:hover{background:#356149}
+@media(max-width:800px){.layout{grid-template-columns:1fr}aside{display:none}}
+</style></head><body>
+<header>课程学习空间 <small style="font-size:12px;color:#91a096;font-weight:400;margin-left:16px">本地模拟 · 不连接雨课堂</small></header>
+<div class="layout"><aside class="sidebar"><h3>课程目录</h3>
+<a href="/course/video/1" data-resource-type="video"><span>视频</span>第一节 · 课程介绍</a>
+<a href="/course/homework/2" data-resource-type="assignment"><span>作业</span>第一章练习</a>
+<a href="/course/exam/3" data-resource-type="exam"><span>考试</span>阶段测验</a>
+<a href="/course/video/4" data-resource-type="video"><span>视频</span>第二节 · 核心概念</a>
+</aside><main><h2>第一节 · 课程介绍</h2><p>视频课程 / 本地界面预览</p>
+<div class="screen"><video></video><b>课程视频</b><small>01:30 / 10:20</small></div>
+<div class="notes"><h3>课程讲义</h3><p>右下角是实际油猴脚本生成的界面，可尝试暂停、继续、切换速度、收起面板，以及展开播放器适配和问题反馈。</p></div>
+</main></div>
+<script>
+const saved = new Map();
+window.GM_getValue = (key, fallback) => saved.has(key) ? saved.get(key) : fallback;
+window.GM_setValue = (key, value) => saved.set(key, value);
+window.GM_registerMenuCommand = () => {};
+for(const link of document.querySelectorAll('aside a')) if(new URL(link.href).pathname===location.pathname) link.classList.add('active');
+const video = document.querySelector('video');
+if(!location.pathname.includes('/video/')) { video.remove(); document.querySelector('.screen b').textContent='非视频页面：将自动跳过'; }
+else {
+ let paused=false;
+ Object.defineProperties(video,{readyState:{get:()=>4},paused:{get:()=>paused},currentTime:{get:()=>90},duration:{get:()=>620}});
+ video.play=async()=>{paused=false;video.dispatchEvent(new Event('playing'));};
+ video.pause=()=>{paused=true;video.dispatchEvent(new Event('pause'));};
+ if(new URLSearchParams(location.search).has('xt')) {
+  const control=document.createElement('xt-speedbutton');
+  control.innerHTML='<xt-speedvalue class="xt_video_player_common_value">1.00X</xt-speedvalue><xt-speedlist class="xt_video_player_common_list_wrap"><ul class="xt_video_player_common_list"><li>1.00X</li><li>1.25X</li><li>1.50X</li><li data-speed="2" keyt="2.00">2.00X</li></ul></xt-speedlist>';
+  document.querySelector('.screen').append(control);
+  let selectedRate=1;
+  window.previewMetrics={optionClicks:[],propertyWrites:[]};
+  Object.defineProperty(video,'playbackRate',{get:()=>selectedRate,set:value=>window.previewMetrics.propertyWrites.push(value)});
+  // 严格事件模式是兼容性测试条件，不代表已经知道真实播放器的拒绝条件。
+  const strictInput=new URLSearchParams(location.search).has('strict');
+  let pointerDown=null;
+  // 用户提供的 XT speed() 源码要求 mousemove 相对 mouseover 有非零位移。
+  let hoverX=0,hoverY=0,movement=0;
+  control.addEventListener('mouseover',event=>{hoverX=event.clientX;hoverY=event.clientY;});
+  control.addEventListener('mousemove',event=>{movement=Math.hypot(event.clientX-hoverX,event.clientY-hoverY);});
+  control.addEventListener('mouseout',()=>{movement=0;hoverX=hoverY=0;});
+  control.addEventListener('pointerdown',event=>{pointerDown={target:event.target,buttons:event.buttons};});
+  for(const option of control.querySelectorAll('li')) option.addEventListener('click',event=>{
+   // 读取 innerText 模拟真实控件：隐藏选项的文字可能无法按可见文本取得。
+   const visible=option.getClientRects().length>0 && getComputedStyle(option.parentElement).display!=='none';
+   window.previewMetrics.optionClicks.push({visible,text:option.innerText});
+   if(!visible)return;
+   if(!movement)return;
+   if(strictInput && (event.detail!==1 || event.clientX<=0 || event.clientY<=0 || pointerDown?.target!==option || pointerDown.buttons!==1))return;
+   selectedRate=parseFloat(option.innerText);
+   control.querySelector('xt-speedvalue').textContent=selectedRate.toFixed(2)+'X';
+   video.dispatchEvent(new Event('ratechange'));
+  });
+ }
+}
+</script><script src="/userscript.js"></script></body></html>
