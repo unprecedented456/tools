@@ -1,0 +1,19 @@
+// ==UserScript==
+// @name         雨课堂 · 连播与章节学习助手
+// @namespace    local.yuketang.playback
+// @version      @@VERSION@@
+// @description  视频连播、图文浏览、同章材料本地记忆；可连接本地模型服务处理作业和讨论。
+// @match        https://*.yuketang.cn/*
+// @match        https://yuketang.cn/*
+// @match        https://yuketang.tsinghua.edu.cn/*
+// @run-at       document-idle
+// @sandbox      raw
+// @noframes
+// @grant        GM_getValue
+// @grant        GM_setValue
+// @grant        GM_registerMenuCommand
+// @grant        unsafeWindow
+// @grant        GM_xmlhttpRequest
+// @connect      127.0.0.1
+// @connect      localhost
+// ==/UserScript==

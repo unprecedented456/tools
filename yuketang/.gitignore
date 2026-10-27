@@ -1,0 +1,6 @@
+.local/
+materials/
+*.log
+__pycache__/
+docs/browser-connection-diagnosis.md
+tools/probe-question-reading.cjs
